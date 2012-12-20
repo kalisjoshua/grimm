@@ -1,7 +1,7 @@
 {
   "name": "grimm",
   "description": "HMVC Framework",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "Thomas Hunter",
   "contributors": [
     {
@@ -12,7 +12,7 @@
   "dependencies": {
     "socket.io": ">=0.9.11",
     "express": ">=3.0.3",
-    "hbs": ">=2.0.2",
+    "hbs": ">=2.0.1",
     "async": ">=0.1.22"
   },
   "devDependencies": {
