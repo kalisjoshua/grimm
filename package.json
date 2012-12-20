@@ -1,0 +1,24 @@
+{
+  "name": "grimm",
+  "description": "HMVC Framework",
+  "version": "0.0.1",
+  "author": "Thomas Hunter",
+  "contributors": [
+    {
+      "name": "Thomas Hunter",
+      "email": "TomHunter@QuickenLoans.com"
+    }
+  ],
+  "dependencies": {
+    "socket.io": ">=0.9.11",
+    "express": ">=3.0.3",
+    "hbs": ">=2.0.1",
+    "async": ">=0.1.22"
+  },
+  "devDependencies": {
+  },
+  "engines": {
+    "node": ">=0.8.11"
+  }
+}
+
