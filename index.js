@@ -130,13 +130,13 @@ var GrimmFramework = function() {
   };
 
   /**
-   * Looks in our controllers directory, and attempts to load them all
-   * Note that _errors is a special controller and is loaded last (for now)
+   * Looks in our bundles directory, and attempts to load them all
+   * Note that _errors is a special bundle and is loaded last (for now)
    */
   self.loadModules = function() {
-    filesystem.readdir(root_directory + '/controllers', function(err, modules) {
+    filesystem.readdir(root_directory + '/bundles', function(err, modules) {
       if (err) {
-        self.log('module', 'Error reading modules directory (controllers)');
+        self.log('module', 'Error reading modules directory (bundles)');
         self.log('module', err);
         process.exit(2);
       }
@@ -164,8 +164,8 @@ var GrimmFramework = function() {
    * PRIVATE
    */
   function attemptLoadController(module_name, callback) {
-    filesystem.stat(root_directory + '/controllers/' + module_name, function(err, stats) {
-      // _errors is a special controller that we don't want to load until the end
+    filesystem.stat(root_directory + '/bundles/' + module_name, function(err, stats) {
+      // _errors is a special bundle that we don't want to load until the end
       if (module_name == '_errors') {
         callback();
         return;
@@ -194,7 +194,7 @@ var GrimmFramework = function() {
    */
   function loadController(module_name, callback) {
     self.log('modload', 'Loading: ' + module_name);
-    require(root_directory + '/controllers/' + module_name)({
+    require(root_directory + '/bundles/' + module_name)({
       "web": web,
       "config": configuration,
       "websockets": websockets,
@@ -202,15 +202,15 @@ var GrimmFramework = function() {
       "log": self.log
     });
 
-    // Does this controller contain a public/ directory?
-    var public_dir = root_directory + '/controllers/' + module_name + '/public';
+    // Does this bundle contain a public/ directory?
+    var public_dir = root_directory + '/bundles/' + module_name + '/public';
     filesystem.stat(public_dir, function(err, stats) {
       if (err) {
         return;
       };
-      // controllers/:name/public* -> http://site/:name/*
+      // bundles/:name/public* -> http://site/:name/*
       web.use('/' + module_name, express.static(public_dir));
-      self.log('public', '/' + module_name + '/* -> controllers/' + module_name + '/public/*');
+      self.log('public', '/' + module_name + '/* -> bundles/' + module_name + '/public/*');
     });
 
     if (typeof callback === 'function') {

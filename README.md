@@ -3,20 +3,20 @@
 This is a Node.js HMVC framework. Right now it's just a placeholder. The framework is mostly
 complete, and should be uploaded in a week or two.
 
-The H part means that there are many different MVC folders within the application. Each one
+The H part means that there are many different MVC 'bundles' within the application. Each one
 contains its own controller, models, views, and even public directories.
 
 # Filesystem
 
-Here is an example of the filesystem structure for a Grimm based application. Each sub MVC
-is located in the Controllers folder. The index.js file is the controller code for that sub
+Here is an example of the filesystem structure for a Grimm based application. Each sub MVC bundle
+is located in the bundles folder. The index.js file is the controller code for that sub
 MVC. As you can probably guess by the filename, it is loaded as a typical Node Module.
 
     /Users/thunter/app/
     |~config/
     | |-dev.json
     | |-prod.json
-    |~controllers/
+    |~bundles/
     | |~_errors/
     | | |~views/
     | | | |-404.html
