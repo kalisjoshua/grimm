@@ -26,7 +26,7 @@ var GrimmFramework = function() {
   // A pointer to socket.io, e.g. require('socket.io').listen()
   var websockets = null;
 
-  // A pointer to hbs, e.g. require('hbs')
+  // A pointer to whiskers, e.g. require('whiskers')
   var template_engine = null;
 
   /**
@@ -84,7 +84,7 @@ var GrimmFramework = function() {
   };
 
   /**
-   * Sets the template engine. Right now we only support the `hbs` module, but one day more
+   * Sets the template engine. Right now we only support the `whiskers` module, but one day more
    */
   self.setTemplate = function(engine) {
     template_engine = engine;
@@ -116,14 +116,14 @@ var GrimmFramework = function() {
 
     // Cache compiled HTML to make it faster. Unless we're in dev.
     if (environment !== 'dev') {
-      web.use(function(req, res, next){
+      web.use(function(req, res, next) {
         res.locals.cache = true;
         next();
       });
     }
 
     // Enable templating support for Express
-    web.set('views', __dirname + '/views');
+    web.set('views', root_directory + '/views');
     web.engine('html', template_engine.__express);
 
     return self;
@@ -198,7 +198,8 @@ var GrimmFramework = function() {
       "web": web,
       "config": configuration,
       "websockets": websockets,
-      "handlebars": template_engine
+      "handlebars": template_engine,
+      "log": self.log
     });
 
     // Does this controller contain a public/ directory?

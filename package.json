@@ -12,7 +12,6 @@
   "dependencies": {
     "socket.io": ">=0.9.11",
     "express": ">=3.0.3",
-    "hbs": ">=2.0.1",
     "async": ">=0.1.22"
   },
   "devDependencies": {
