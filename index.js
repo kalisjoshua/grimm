@@ -29,6 +29,9 @@ var GrimmFramework = function() {
   // A pointer to whiskers, e.g. require('whiskers')
   var template_engine = null;
 
+  // A function to do our logging. Arguments include title, message, request
+  var logger = null;
+
   /**
    * Sets some configuration settings used by some modules
    */
@@ -239,9 +242,20 @@ var GrimmFramework = function() {
   };
 
   /**
+   * Sets a function to be used for logging, instead of the built in one.
+   */
+  self.setLogger = function(logger) {
+    self.logger = logger;
+  };
+
+  /**
    * Logs a message into our specified format. Will need to beef this bad boy up one day.
    */
-  self.log = function(level, message) {
+  self.log = function(level, message, details) {
+    if (typeof self.logger === 'function') {
+      logger(level, message, details);
+      return;
+    }
     var LEVEL_LEN = 8;
     var title = level.toString().substr(0,LEVEL_LEN).toUpperCase();
     while (title.length < LEVEL_LEN) {
