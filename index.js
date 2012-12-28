@@ -51,8 +51,8 @@ var GrimmFramework = function() {
         callback(err);
         return;
       }
-      var config = JSON.parse(contents);
-      callback(null, config);
+      self.configure(JSON.parse(contents));
+      callback(null);
     });
     
     return self;
@@ -246,6 +246,8 @@ var GrimmFramework = function() {
    */
   self.setLogger = function(logger) {
     self.logger = logger;
+
+    return self;
   };
 
   /**
@@ -253,7 +255,7 @@ var GrimmFramework = function() {
    */
   self.log = function(level, message, details) {
     if (typeof self.logger === 'function') {
-      logger(level, message, details);
+      self.logger(level, message, details);
       return;
     }
     var LEVEL_LEN = 8;
