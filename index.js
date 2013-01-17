@@ -49,7 +49,7 @@ var GrimmFramework = function() {
 
     self.log('config', 'Using config/' + environment + '.json');
 
-    filesystem.readFile(root_directory + 'config/' + environment + '.json', function(err, contents) {
+    filesystem.readFile(root_directory + '/config/' + environment + '.json', function(err, contents) {
       if (err) {
         callback(err);
         return;
