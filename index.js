@@ -44,12 +44,12 @@ var GrimmFramework = function() {
   /**
    * Loads configuration from a file
    */
-  self.loadConfig = function(env, callback) {
+  self.loadConfig = function(env, app_path, callback) {
     self.setEnv(env);
 
     self.log('config', 'Using config/' + environment + '.json');
 
-    filesystem.readFile(path.resolve(__dirname + '/config/' + environment + '.json'), function(err, contents) {
+    filesystem.readFile(root_directory + 'config/' + environment + '.json', function(err, contents) {
       if (err) {
         callback(err);
         return;
