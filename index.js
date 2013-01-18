@@ -3,70 +3,28 @@ var path            = require('path');
 var filesystem      = require('fs');
 
 var GrimmFramework = function() {
-  var self = this;
-
-  // Configuration Object
-  var configuration = {};
-
-  // Rood directory for the framework. Here we assume Grimm is a normally located module.
-  var root_directory = path.resolve(__dirname, '../../');
-
-  // The environment level (think dev, test, prod).
-  var environment = 'dev';
-
-  // A pointer to the web object, e.g. express()
-  var web = null;
-
-  // A pointer to express, e.g. require('express')
-  var express = null;
-
-  // A pointer to a server, e.g. http.createServer()
-  var server = null;
-
-  // A pointer to socket.io, e.g. require('socket.io').listen()
-  var websockets = null;
-
-  // A pointer to whiskers, e.g. require('whiskers')
-  var template_engine = null;
-
-  // A function to do our logging. Arguments include title, message, request
-  var logger = null;
+  var self = this,
+      configuration,        // Check /confg/*.json for examples
+      express,              // A pointer to express, e.g. require('express')
+      logger,               // A function to do our logging. Arguments include title, message, request
+      root_directory,       // The root of the where the application is running
+      server,               // A pointer to a server, e.g. http.createServer()
+      template_engine,      // A pointer to whiskers, e.g. require('whiskers')
+      web,                  // A pointer to the web object, e.g. express()
+      websockets;           // A pointer to socket.io, e.g. require('socket.io').listen()
 
   /**
    * Sets some configuration settings used by some modules
    */
-  self.configure = function(config) {
-    configuration = config;
+  self.config = function(config) {
+    root_directory = path.resolve(config.root);
+    configuration = config.env;
 
-    return self;
-  };
-
-  /**
-   * Loads configuration from a file
-   */
-  self.loadConfig = function(env, callback) {
-    self.setEnv(env);
-
-    self.log('config', 'Using config/' + environment + '.json');
-
-    filesystem.readFile(root_directory + '/config/' + environment + '.json', function(err, contents) {
-      if (err) {
-        callback(err);
-        return;
-      }
-      self.configure(JSON.parse(contents));
-      callback(null);
-    });
-
-    return self;
-  };
-
-  /**
-   * Sets the environment. `dev` is assumed for a local dev machine, use w/e others you want
-   */
-  self.setEnv = function(env) {
-    environment = env;
-    return self;
+    return self
+      .setWeb(config.web, config.framework, config.server)
+      .setSockets(config.socketio.listen(config.server))
+      .setTemplate(config.templating)
+      .setLogger(config.logger);
   };
 
   /**
@@ -121,7 +79,7 @@ var GrimmFramework = function() {
     self.log('public', '/* -> public/*');
 
     // Cache compiled HTML to make it faster. Unless we're in dev.
-    if (environment !== 'dev') {
+    if (configuration.env !== 'dev') {
       web.use(function(req, res, next) {
         res.locals.cache = true;
         next();
@@ -162,7 +120,7 @@ var GrimmFramework = function() {
     });
 
     return self;
-  }
+  };
 
   /**
    * Checks to see if the specified controller can be loaded, then passes
@@ -213,7 +171,7 @@ var GrimmFramework = function() {
     filesystem.stat(public_dir, function(err, stats) {
       if (err) {
         return;
-      };
+      }
       // bundles/:name/public* -> http://site/:name/*
       web.use('/' + module_name, express.static(public_dir));
       self.log('public', '/' + module_name + '/* -> bundles/' + module_name + '/public/*');
