@@ -24,33 +24,6 @@ function buildFileObject (obj, dir, filter) {
     } catch (err) {}
 }
 
-// verbose configuration validation
-function checkConfig (config) {
-  if (!config) {
-    throw new Error("Required configuration object not provided to Grimm constructor.");
-  }
-
-  REQUIRED_CONFIG_KEYS
-    .forEach(function (key) {
-      if (!config[key]) {
-        throw new Error("Required configuration property [" +
-          key + "] not provided to Grimm constructor.");
-      }
-    });
-
-  // config.app required methods/properties
-  REQUIRED_APP_METHODS
-    .forEach(function (method) {
-      if (!config.app[method]) {
-        throw new Error("Required method/property not available on config.app: " + method);
-      }
-    });
-
-  if (!!config.logger && typeof config.logger !== "function") {
-    throw new Error("Logger provided but is not a function.");
-  }
-}
-
 /*= Grimm (HMVC)
 
   As in Grimm's Tales.
@@ -112,7 +85,7 @@ function checkConfig (config) {
 
 function Grimm (config) {
   // ensure all necessary properties are available before attempting to continue
-  checkConfig(config);
+  Grimm.fn.validateConfig(config);
 
   // resolve path to make it reliable for later use
   config.root = path.resolve(config.root);
@@ -339,6 +312,35 @@ Grimm.prototype = {
 
   ts: function () {
     return this.toString();
+  },
+
+  validateConfig: function (config) {
+    if (!config) {
+      throw new Error("Required configuration object not provided to Grimm constructor.");
+    }
+
+    REQUIRED_CONFIG_KEYS
+      .forEach(function (key) {
+        if (!config[key]) {
+          throw new Error("Required configuration property [" +
+            key + "] not provided to Grimm constructor.");
+        }
+      });
+
+    // config.app required methods/properties
+    REQUIRED_APP_METHODS
+      .forEach(function (method) {
+        if (!config.app[method]) {
+          throw new Error("Required method/property not available on config.app: " + method);
+        }
+      });
+
+    if (!!config.logger && typeof config.logger !== "function") {
+      throw new Error("Logger provided but is not a function.");
+    }
+
+    // if execution gets here all is well
+    return true;
   },
 
   valueOf: function () {
