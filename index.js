@@ -28,38 +28,14 @@ function buildFileObject (obj, dir, filter) {
 
   As in Grimm's Tales.
     
-  Grimm builds on-top of express and adds ("Tales") Hierarchical MVC to a Node
-  application. The Grimm object will be passed into the bundles ("Tales") to be
+  Grimm builds on-top of express and adds Hierarchical MVC to a Node
+  application. The Grimm object will be passed into the bundles to be
   used throughout the application so it is configurable.
 
-  == Bundles ("Tales")
-
-  Bundles will be logical groupings of an application. There will not be a clear
-  definition of what dictates grouping; that will be based on the developer and
-  the application.
-
-  __configuration properties__
-  grimm.env                 (/config/<env>.json).env
-
-  __express mixins__
-  grimm.delete              express.delete
-  grimm.get                 express.get
-  grimm.post                express.post
-  grimm.put                 express.put
-
-  __directory paths__
-  grimm.layouts             string builder for path to file
-  grimm.models              /models
-  grimm.views               /views
-
-  __local paths__
-  grimm.local.models        /bundles/<bundle>/models
-  grimm.local.views         /bundles/<bundle>/views
-
-  == Instance Methods/Properties
+  == (`grimm`) Instance Methods/Properties - passed to bundle controllers
   app                 instance of <express>
   engine              <express> function
-  env                 environment name from /config/<env>.json
+  env                 env from /config/<env>.json
   root                path of the root folder of the application
   server              http.createServer(app)
   socketio            socketio library
@@ -75,12 +51,22 @@ function buildFileObject (obj, dir, filter) {
   use                 alias to <express>.use
   log                 generic logging function
   logLevels           holds copy of levels from logger
-  debug & Debug       alias to logger.debug
-  info  & Info        alias to logger.info
-  warn  & Warn        alias to logger.warn
-  error & Error       alias to logger.error
-  fatal & Fatal       alias to logger.fatal
-  audit & Audit       alias to logger.audit
+  debug               alias to logger.debug
+  info                alias to logger.info
+  warn                alias to logger.warn
+  error               alias to logger.error
+  fatal               alias to logger.fatal
+  audit               alias to logger.audit
+
+  = Bundles
+
+  Bundles will be logical groupings of an application. There will not be a clear
+  definition of what dictates grouping; that will be based on the developer and
+  the application.
+
+  == (`bundle`) Instance Methods/Properties - passed to bundle controllers
+  name                name of bundle folder
+  views               hash with filenames holding path to file
   */
 
 function Grimm (config) {
