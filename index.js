@@ -1,232 +1,349 @@
-var async           = require('async');
-var path            = require('path');
-var filesystem      = require('fs');
 
-var GrimmFramework = function() {
-  var self = this,
-      configuration,        // Check /confg/*.json for examples
-      express,              // A pointer to express, e.g. require('express')
-      logger,               // A function to do our logging. Arguments include title, message, request
-      root_directory,       // The root of the where the application is running
-      server,               // A pointer to a server, e.g. http.createServer()
-      template_engine,      // A pointer to whiskers, e.g. require('whiskers')
-      web,                  // A pointer to the web object, e.g. express()
-      websockets;           // A pointer to socket.io, e.g. require('socket.io').listen()
+var fs     = require('fs'),
+    path   = require('path'),
+    xtend  = require('xtend'),
 
-  /**
-   * Sets some configuration settings used by some modules
-   */
-  self.config = function(config) {
-    root_directory = path.resolve(config.root);
-    configuration = config.env;
+    // these will be alias' on Grimm instance the map to "Express"-like methods
+    REQUIRED_APP_METHODS = "delete get post put set use".split(" "),
+    // these will be alias' on Grimm instance that map to the config in constructor
+    REQUIRED_CONFIG_KEYS = "app engine env root server socketio templating".split(" "),
 
-    return self
-      .setWeb(config.web, config.framework, config.server)
-      .setSockets(config.socketio.listen(config.server))
-      .setTemplate(config.templating)
-      .setLogger(config.logger);
-  };
+    htmlFiles = RegExp.prototype.test.bind(/html$/);
 
-  /**
-   * Sets the websocket engine. Right now we only support the `socket.io` module, but one day more
-   */
-  self.setSockets = function(engine) {
-    websockets = engine;
-    return self;
-  };
 
-  /**
-   * Sets the web server. Right now we only support the `express` module, but one day more
-   * This is starting to look ugly... Perhaps I should just load the modules from within grimm?
-   */
-  self.setWeb = function(engine, exp, srvr) {
-    web = engine;
-    express = exp;
-    server = srvr;
+function buildFileObject (obj, dir, filter) {
+  try {
+    obj[dir.split("/").pop()] = fs.readdirSync(dir)
+      .reduce(function (acc, item) {
+        if (filter(item)) {
+          acc[item.split(".").shift()] = [dir, item].join("/");
+        }
 
-    return self;
-  };
+        return acc;
+      }, {});
+    } catch (err) {}
+}
 
-  /**
-   * Sets the template engine. Right now we only support the `whiskers` module, but one day more
-   */
-  self.setTemplate = function(engine) {
-    template_engine = engine;
-    return self;
-  };
+// verbose configuration validation
+function checkConfig (config) {
+  if (!config) {
+    throw new Error("Required configuration object not provided to Grimm constructor.");
+  }
 
-  /**
-   * Sets the root directory, you probably want to just use __dirname from the loading script
-   */
-  self.setRoot = function(directory) {
-    root_directory = directory;
-    return self;
-  };
+  REQUIRED_CONFIG_KEYS
+    .forEach(function (key) {
+      if (!config[key]) {
+        throw new Error("Required configuration property [" +
+          key + "] not provided to Grimm constructor.");
+      }
+    });
 
-  /**
-   * Returns the root directory
-   */
-  self.getRoot = function() {
-    return root_directory;
-  };
+  // config.app required methods/properties
+  REQUIRED_APP_METHODS
+    .forEach(function (method) {
+      if (!config.app[method]) {
+        throw new Error("Required method/property not available on config.app: " + method);
+      }
+    });
 
-  /**
-   * Initializes some Grimm conventions
-   */
-  self.initialize = function() {
-    // Provides /styles, /scripts, /images, etc. Mapped to the public/ dir
-    web.use('/', express.static(root_directory + '/public'));
-    self.log('public', '/* -> public/*');
+  if (!!config.logger && typeof config.logger !== "function") {
+    throw new Error("Logger provided but is not a function.");
+  }
+}
 
+/*= Grimm (HMVC)
+
+  As in Grimm's Tales.
+    
+  Grimm builds on-top of express and adds ("Tales") Hierarchical MVC to a Node
+  application. The Grimm object will be passed into the bundles ("Tales") to be
+  used throughout the application so it is configurable.
+
+  == Bundles ("Tales")
+
+  Bundles will be logical groupings of an application. There will not be a clear
+  definition of what dictates grouping; that will be based on the developer and
+  the application.
+
+  __configuration properties__
+  grimm.env                 (/config/<env>.json).env
+
+  __express mixins__
+  grimm.delete              express.delete
+  grimm.get                 express.get
+  grimm.post                express.post
+  grimm.put                 express.put
+
+  __directory paths__
+  grimm.layouts             string builder for path to file
+  grimm.models              /models
+  grimm.views               /views
+
+  __local paths__
+  grimm.local.models        /bundles/<bundle>/models
+  grimm.local.views         /bundles/<bundle>/views
+
+  == Instance Methods/Properties
+  app                 instance of <express>
+  engine              <express> function
+  env                 environment name from /config/<env>.json
+  root                path of the root folder of the application
+  server              http.createServer(app)
+  socketio            socketio library
+  templating          instance of templating engine
+  config              object from /config/<env>.json
+  layouts             hash with filenames holding path to file
+  partials            hash with filenames holding path to file
+  delete              alias to <express>.delete
+  get                 alias to <express>.get
+  post                alias to <express>.post
+  put                 alias to <express>.put
+  set                 alias to <express>.set
+  use                 alias to <express>.use
+  log                 generic logging function
+  logLevels           holds copy of levels from logger
+  debug & Debug       alias to logger.debug
+  info  & Info        alias to logger.info
+  warn  & Warn        alias to logger.warn
+  error & Error       alias to logger.error
+  fatal & Fatal       alias to logger.fatal
+  audit & Audit       alias to logger.audit
+  */
+
+function Grimm (config) {
+  // ensure all necessary properties are available before attempting to continue
+  checkConfig(config);
+
+  // resolve path to make it reliable for later use
+  config.root = path.resolve(config.root);
+
+  // add properties to instance after validating they are there first
+  REQUIRED_CONFIG_KEYS
+    .forEach(function (prop) {
+      this[prop] = config[prop];
+    }.bind(this)); // bind the function to the instance not the array item
+
+  this.sockets = config.socketio.listen(config.server);
+
+  // all of the other settings aren't necessary to the app once running,
+  // and are still available on the config object if necessary in the future...?
+  this.env = this.env.env;
+
+  this.config = config.env;
+  // this.json = this.root + "/json";
+  // this.models = this.root + "/models";
+
+  buildFileObject(this, this.root + "/views/layouts", htmlFiles);
+  buildFileObject(this, this.root + "/views/partials", htmlFiles);
+
+  // alias application methods on the instance to make it nicer for developers
+  REQUIRED_APP_METHODS
+    .forEach(function (method) {
+      this[method] = function () {
+        config.app[method].apply(config.app, [].slice.call(arguments, 0));
+      };
+    }.bind(this));
+
+  // A log function is optional since Grimm will provide a default.
+  Grimm.fn.setLogFn.call(this, config.logger);
+}
+
+Grimm.fn = 
+Grimm.prototype = {
+  handler: function (data) {
+    var grimm = this;
+
+    return function (req, res) {
+      res.render(grimm.layouts.front, xtend({}, {
+        partials: {
+          footer: grimm.partials.footer
+        },
+        title: "Default Page Title"
+      // FIXME: this nastiness needs to be done right now because the partials
+      //        get compiled to functions - instead of remaining paths to files
+      }, JSON.parse(JSON.stringify(data))));
+    };
+  },
+
+  // exposed for people smarter than me who want to do tricky stuff with startup
+  // TODO: provide a way to get the config of the instance to enable above
+  initialize: function () {
     // Cache compiled HTML to make it faster. Unless we're in dev.
-    if (configuration.env !== 'dev') {
-      web.use(function(req, res, next) {
+    if (this.env !== "dev") {
+      this.app.use(function(req, res, next) {
         res.locals.cache = true;
         next();
       });
     }
 
     // Enable templating support for Express
-    web.set('views', root_directory + '/views');
-    web.engine('html', template_engine.__express);
+    this.app.set('views', this.root + '/views');
+    this.app.engine('html', this.templating.__express);
 
-    return self;
-  };
+    return this;
+  },
 
-  /**
-   * Looks in our bundles directory, and attempts to load them all
-   * Note that _errors is a special bundle and is loaded last (for now)
-   */
-  self.loadModules = function() {
-    filesystem.readdir(root_directory + '/bundles', function(err, modules) {
-      if (err) {
-        self.log('module', 'Error reading modules directory (bundles)');
-        self.log('module', err);
-        process.exit(2);
-      }
+  // exposed for people smarter than me who want to do tricky stuff with startup
+  // TODO: provide a way to get the config of the instance to enable above
+  listen: function (config) {
+    this.server.listen(config.web.port, config.web.host, null, function() {
+      this.info('(http) Listening on ' + (config.web.host || '*') + ':' + config.web.port);
 
-      self.log('modload', 'Loading Modules...');
-
-      async.forEach(modules, attemptLoadController, function(err) {
-        if (err) {
-          self.log('module', err);
-          process.exit(4);
-          return;
-        }
-        loadController('_errors', function() {
-          self.log('modload', 'All Modules Loaded.');
-        });
-      });
-    });
-
-    return self;
-  };
-
-  /**
-   * Checks to see if the specified controller can be loaded, then passes
-   * it off to loadController()
-   * PRIVATE
-   */
-  function attemptLoadController(module_name, callback) {
-    filesystem.stat(root_directory + '/bundles/' + module_name, function(err, stats) {
-      // _errors is a special bundle that we don't want to load until the end
-      if (module_name == '_errors') {
-        callback();
-        return;
-      }
-
-      if (err) {
-        self.log('modload', 'Encountered an error whilst loading a module, ' + module_name);
-        callback(err);
-        return;
-      }
-
-      if (stats.isDirectory()) {
-        loadController(module_name, callback);
-      } else {
-        // nothing to do...
-        if (typeof callback === 'function') {
-          callback();
-        }
-      }
-    });
-  }
-
-  /**
-   * Loads the specified controller, and assigns a public directory is applicable
-   * PRIVATE
-   */
-  function loadController(module_name, callback) {
-    self.log('modload', 'Loading: ' + module_name);
-    require(root_directory + '/bundles/' + module_name)({
-      "web": web,
-      "config": configuration,
-      "websockets": websockets,
-      "handlebars": template_engine,
-      "log": self.log
-    });
-
-    // Does this bundle contain a public/ directory?
-    var public_dir = root_directory + '/bundles/' + module_name + '/public';
-    filesystem.stat(public_dir, function(err, stats) {
-      if (err) {
-        return;
-      }
-      // bundles/:name/public* -> http://site/:name/*
-      web.use('/' + module_name, express.static(public_dir));
-      self.log('public', '/' + module_name + '/* -> bundles/' + module_name + '/public/*');
-    });
-
-    if (typeof callback === 'function') {
-      callback();
-    }
-  }
-
-  /**
-   * Begins our web server
-   */
-  self.listen = function() {
-    server.listen(configuration.web.port, configuration.web.host, null, function() {
-      self.log('http', 'Listening on ' + (configuration.web.host || '*') + ':' + configuration.web.port);
       try {
-        self.log('perms', 'Old User ID: ' + process.getuid() + ', Old Group ID: ' + process.getgid());
-        process.setgid(configuration.permissions.group);
-        process.setuid(configuration.permissions.user);
-        self.log('perms', 'New User ID: ' + process.getuid() + ', New Group ID: ' + process.getgid());
+        this.info('(perms) Old User ID: ' + process.getuid() + ', Old Group ID: ' + process.getgid());
+
+        process.setgid(config.permissions.group);
+        process.setuid(config.permissions.user);
+
+        this.info('(perms) New User ID: ' + process.getuid() + ', New Group ID: ' + process.getgid());
       } catch (err) {
-        self.log('perms', 'Cowardly refusing to keep the process alive as root.');
+        this.info('(perms) Cowardly refusing to keep the process alive as root.');
         process.exit(4);
       }
+    }.bind(this));
+
+    return this;
+  },
+
+  // TODO: (maybe) what happens with deeper bundles? will they ever even exist?
+  loadBundles: function () {
+    var grimm = this;
+
+    function load (bundle) {
+      var loc = grimm.root + "/bundles/" + bundle + "/index.js";
+
+      // controller
+      fs.exists(loc, function (exists) {
+        var locals = {name: bundle};
+
+        if (exists) {
+          grimm.info("Loading bundle: " + bundle);
+          // FIXME: what about controller files that don't export a function?
+          // TODO: load locals: content? (CMS), json?, models?, views
+          buildFileObject(locals, loc.split("/").slice(0, -1).join("/") + "/views", htmlFiles);
+
+          // load the Node module and then execute the function
+          require(loc)(grimm, locals);
+        }
+      });
+      
+      // public directory
+      Grimm.fn.registerPublic.call(grimm, "./bundles/" + bundle);
+    }
+
+    fs.readdir(grimm.root + "/bundles", function (err, bundles) {
+      if (err) {
+        grimm.error("No bundles found. Do you really need Grimm?");
+      } else {
+        bundles
+          .filter(function (name) {return name !== "_errors";}) // skip errors
+          .forEach(load);
+
+        load("_errors"); // errors need to be loaded last so they evaluate last
+      }
     });
 
-      return self;
-  };
+    return this;
+  },
 
-  /**
-   * Sets a function to be used for logging, instead of the built in one.
-   */
-  self.setLogger = function(logger) {
-    self.logger = logger;
+  // static log function; logs to console.log
+  /*
+    This function should have no reference to any external logger function/object
+    passed into the constructor; that way this function cna be used as a fallback
+    function for the external library and not create a cyclical reference.
+    */
+  log: function (level, message, details) {
+    if (!!level && ~(this.logLevels || []).indexOf(level) && !!message) {
+      this.debug("no level or message passed to Grimm.log()."); // very meta
 
-    return self;
-  };
-
-  /**
-   * Logs a message into our specified format. Will need to beef this bad boy up one day.
-   */
-  self.log = function(level, message, details) {
-    if (typeof self.logger === 'function') {
-      self.logger(level, message, details);
-      return;
+      return this;
     }
+
     var LEVEL_LEN = 8;
-    var title = level.toString().substr(0,LEVEL_LEN).toUpperCase();
-    while (title.length < LEVEL_LEN) {
-      title = ' ' + title;
+    var title = level.toString().substr(0, LEVEL_LEN).toUpperCase(),
+        space = Array(LEVEL_LEN - title.length).join(" ");
+
+    console.log('[' + space + title + '] ' + message, details || "");
+
+    return this;
+  },
+
+  // safely set the log function; with fallback to static log function
+  setLogFn: function (fn) {
+    function aliasTo (self, levels, fn) {
+      levels
+        .forEach(function (level) {
+          self[level] = self[level.toLowerCase()] = fn.bind(fn, level);
+        });
     }
 
-    console.log('[' + title + '] ' + message);
-  };
+    if (!!fn && typeof fn === "function") {
+      this.log = fn;
+
+      if (fn.getLevels && fn.getLevels()) {
+        this.logLevels = fn.getLevels();
+
+        // alias external level logging functions to Grimm
+        aliasTo(this, this.logLevels, fn);
+      }
+    } else {
+      this.log = Grimm.fn.log;
+
+      if (!this.logLevels) {
+        this.logLevels = "Debug Info Warn Error Fatal Audit".split(" ");
+      }
+
+      // (re)bind convenience methods
+      aliasTo(this, this.logLevels, Grimm.fn.log);
+    }
+
+    return this;
+  },
+
+  // used for app/public and /bundles/*/public (hopefully)
+  registerPublic: function (loc) {
+    loc = path.resolve(this.root + "/" + (loc || "").replace(/\/$/, "") + "/public");
+
+    fs.stat(loc, function (err, stat) {
+      if (err) {
+        this.info("No public directory found: " + loc);
+      } else if (stat.isDirectory()) {
+        this.info("Registered public directory: " + loc);
+
+        // "static" is a reserved word so we use index notation here
+        this.use(this.engine["static"](loc));
+      }
+    }.bind(this));
+    
+    return this;
+  },
+
+  // call everything in order as a shortcut for application startup
+  start: function (config) {
+
+    Grimm.fn.registerPublic.call(this);
+
+    Grimm.fn.initialize.call(this);
+
+    Grimm.fn.loadBundles.call(this);
+
+    // listen will need config since it will retain reference to /config/<env>.json
+    Grimm.fn.listen.call(this, this.config);
+
+    return this;
+  },
+
+  toString: function () {
+    return "Grimm Framework (HMVC) - Quicken Loans";
+  },
+
+  ts: function () {
+    return this.toString();
+  },
+
+  valueOf: function () {
+    return this.toString();
+  }
 };
 
-module.exports = new GrimmFramework();
+module.exports = Grimm;

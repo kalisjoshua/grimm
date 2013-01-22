@@ -1,16 +1,21 @@
 {
   "name": "grimm",
   "description": "HMVC Framework",
-  "version": "0.0.2",
+  "version": "0.1.1",
+  "main": "./index.js",
   "author": "Thomas Hunter",
   "contributors": [
     {
-      "name": "Thomas Hunter",
-      "email": "TomHunter@QuickenLoans.com"
-    },
-    {
       "name": "Julie Bellinson",
       "email": "JulieBellinson@quickenloans.com"
+    },
+    {
+      "name": "Calvin Bushor",
+      "email": "CalvinBushor@QuickenLoans.com"
+    },
+    {
+      "name": "Thomas Hunter",
+      "email": "TomHunter@QuickenLoans.com"
     },
     {
       "name": "Joshua Kalis",
@@ -18,10 +23,6 @@
     }
   ],
   "dependencies": {
-    "async"     : "0.1.22",
-    "express"   : "3.0.3",
-    "hbs"       : "2.0.1",
-    "socket.io" : "0.9.11",
     "xtend"     : "1.0.3"
   },
   "devDependencies": {
