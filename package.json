@@ -26,11 +26,13 @@
     "xtend"     : "1.0.3"
   },
   "devDependencies": {
-    "chai": "1.4.2",
-    "mocha": "1.8.1"
+    "chai"      : "1.4.2",
+    "express"   : "3.0.6",
+    "hbs"       : "2.0.1",
+    "mocha"     : "1.8.1"
   },
   "engines": {
-    "node": ">=0.8.11"
+    "node"      : ">=0.8.11"
   }
 }
 
