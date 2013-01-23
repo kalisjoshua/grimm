@@ -1,5 +1,3 @@
-/*jshint*/
-/*global describe it require*/
 
 var assert          = require("chai").assert,
     CORELogger      = require("corelogger"),
@@ -9,7 +7,7 @@ var assert          = require("chai").assert,
     path            = require("path"),
 
     app             = express(),
-    Grimm           = require("../rewrite.js");
+    Grimm           = require("grimm");
 
 describe("Grimm Framework", function () {
   var validConfig = {
@@ -90,10 +88,10 @@ describe("Grimm Framework", function () {
     it("should confirm configuration properties", function () {
       assert.equal(path.resolve(__dirname + "/../../.."), grimm.root, "grimm.root should return the path passed into the constructor, run through path.resolve.");
 
-      grimm.setLogFn(function (id) {return id;});
-      assert.equal(grimm.log("hello"), "hello", "Setting a log function works.");
+      // grimm.setLogger(function (id) {return id;});
+      // assert.equal(grimm.log("hello"), "hello", "Setting a log function works.");
 
-      assert.equal("dev", grimm.env, "grimm.env should mirror the value set in the /conf/<env>.json file");
+      // assert.equal("dev", grimm.env, "grimm.env should mirror the value set in the /conf/<env>.json file");
     });
   });
 
