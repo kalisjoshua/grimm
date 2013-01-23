@@ -139,6 +139,9 @@ Grimm.prototype = {
     this.app.set('views', this.root + '/views');
     this.app.engine('html', this.templating.__express);
 
+    // Accept POST data
+    this.app.use(this.engine.bodyParser());
+
     return this;
   },
 
