@@ -7,6 +7,8 @@ var fs     = require('fs'),
     REQUIRED_APP_METHODS = "delete get post put set use".split(" "),
     // these will be alias' on Grimm instance that map to the config in constructor
     REQUIRED_CONFIG_KEYS = "app engine env root server socketio templating".split(" "),
+    // logging levels
+    REQUIRED_LOGGING_LEVELS = "Debug Info Warn Error Fatal Audit".split(" "),
 
     htmlFiles = RegExp.prototype.test.bind(/html$/);
 
@@ -103,8 +105,15 @@ function Grimm (config) {
       };
     }.bind(this));
 
+  if (!config.logger) {
+    REQUIRED_LOGGING_LEVELS
+      .forEach(function (level) {
+        this[level] = this[level.toLowerCase()] = Grimm.fn.log.bind(this, level);
+      }.bind(this));
+  }
+
   // A log function is optional since Grimm will provide a default.
-  Grimm.fn.setLogFn.call(this, config.logger);
+  Grimm.fn.setLogger.call(this, config.logger);
 }
 
 Grimm.fn = 
@@ -228,35 +237,31 @@ Grimm.prototype = {
   },
 
   // safely set the log function; with fallback to static log function
-  setLogFn: function (fn) {
-    function aliasTo (self, levels, fn) {
-      levels
-        .forEach(function (level) {
-          self[level] = self[level.toLowerCase()] = fn.bind(fn, level);
-        });
+  setLogger: function (logger) {
+    function hasRequiredFunctions (obj) {
+      return REQUIRED_LOGGING_LEVELS.every(function (item) {
+        return obj[item] && typeof obj[item] === "function";
+      });
     }
 
-    if (!!fn && typeof fn === "function") {
-      this.log = fn;
-
-      if (fn.getLevels && fn.getLevels()) {
-        this.logLevels = fn.getLevels();
-
-        // alias external level logging functions to Grimm
-        aliasTo(this, this.logLevels, fn);
-      }
-    } else {
-      this.log = Grimm.fn.log;
-
-      if (!this.logLevels) {
-        this.logLevels = "Debug Info Warn Error Fatal Audit".split(" ");
-      }
-
-      // (re)bind convenience methods
-      aliasTo(this, this.logLevels, Grimm.fn.log);
+    if (!logger) {
+      logger = this;
     }
+
+    if (!hasRequiredFunctions(logger)) {
+      throw new Error("Logger provided but does not provide required functions.");
+    }
+
+    REQUIRED_LOGGING_LEVELS
+      .forEach(function (level) {
+        this[level] = this[level.toLowerCase()] = logger[level].bind(logger);
+      });
 
     return this;
+  },
+
+  getLoggingLevels: function () {
+    return REQUIRED_LOGGING_LEVELS.slice(0);
   },
 
   // used for app/public and /bundles/*/public (hopefully)
@@ -321,8 +326,8 @@ Grimm.prototype = {
         }
       });
 
-    if (!!config.logger && typeof config.logger !== "function") {
-      throw new Error("Logger provided but is not a function.");
+    if (!!config.logger) {
+      this.setLogger.call(this, config.logger);
     }
 
     // if execution gets here all is well
