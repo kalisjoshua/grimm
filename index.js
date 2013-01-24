@@ -137,23 +137,23 @@ Grimm.prototype = {
     // Enable cookie-based sessions accessible via req.session
     this.app.use(this.engine.cookieParser('yQOTAAiriu6WNDWo'));
     this.app.use(this.engine.cookieSession({
+      key: 'ql30',
       cookie: { maxAge: 3600000 }
     }));
 
-    // TODO: verify POSTs are working
-
-    // Accept POST data - raw string accessible via req.rawBody
-    this.app.use(function(req, res, next) {
-      var data = '';
-      req.setEncoding('utf8');
-      req.on('data', function(chunk) {
-          data += chunk;
-      });
-      req.on('end', function() {
-          req.rawBody = data;
-          next();
-      });
-    });
+    // // Accept POST data - raw string accessible via req.rawBody
+    // // FIXME: May or may not work with following bodyParser method
+    // this.app.use(function(req, res, next) {
+    //   var data = '';
+    //   req.setEncoding('utf8');
+    //   req.on('data', function(chunk) {
+    //       data += chunk;
+    //   });
+    //   req.on('end', function() {
+    //       req.rawBody = data;
+    //       next();
+    //   });
+    // });
 
     // Accept POST data - object accessible via req.body
     this.app.use(this.engine.bodyParser());
