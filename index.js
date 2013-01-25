@@ -29,7 +29,7 @@ function buildFileObject (obj, dir, filter) {
 /*= Grimm (HMVC)
 
   As in Grimm's Tales.
-    
+
   Grimm builds on-top of express and adds Hierarchical MVC to a Node
   application. The Grimm object will be passed into the bundles to be
   used throughout the application so it is configurable.
@@ -117,16 +117,14 @@ function Grimm (config) {
   }
 }
 
-Grimm.fn = 
+Grimm.fn =
 Grimm.prototype = {
   handler: function (data) {
     var grimm = this;
 
     return function (req, res) {
-      res.render(grimm.layouts.front, xtend({}, {
-        partials: {
-          footer: grimm.partials.footer
-        },
+      res.render(grimm.layouts.application, xtend({}, {
+        partials: {},
         title: "Default Page Title"
       // FIXME: this nastiness needs to be done right now because the partials
       //        get compiled to functions - instead of remaining paths to files
@@ -137,6 +135,30 @@ Grimm.prototype = {
   // exposed for people smarter than me who want to do tricky stuff with startup
   // TODO: provide a way to get the config of the instance to enable above
   initialize: function () {
+    // Enable cookie-based sessions accessible via req.session
+    this.app.use(this.engine.cookieParser('yQOTAAiriu6WNDWo'));
+    this.app.use(this.engine.cookieSession({
+      key: 'ql30',
+      cookie: { maxAge: 3600000 }
+    }));
+
+    // // Accept POST data - raw string accessible via req.rawBody
+    // // FIXME: May or may not work with following bodyParser method
+    // this.app.use(function(req, res, next) {
+    //   var data = '';
+    //   req.setEncoding('utf8');
+    //   req.on('data', function(chunk) {
+    //       data += chunk;
+    //   });
+    //   req.on('end', function() {
+    //       req.rawBody = data;
+    //       next();
+    //   });
+    // });
+
+    // Accept POST data - object accessible via req.body
+    this.app.use(this.engine.bodyParser());
+
     // Cache compiled HTML to make it faster. Unless we're in dev.
     if (this.env !== "dev") {
       this.app.use(function(req, res, next) {
@@ -149,14 +171,9 @@ Grimm.prototype = {
     this.app.set('views', this.root + '/views');
     this.app.engine('html', this.templating.__express);
 
-    // Accept POST data
-    this.app.use(this.engine.bodyParser());
-
     return this;
   },
 
-  // exposed for people smarter than me who want to do tricky stuff with startup
-  // TODO: provide a way to get the config of the instance to enable above
   listen: function (config) {
     this.server.listen(config.web.port, config.web.host, null, function() {
       this.info('(http) Listening on ' + (config.web.host || '*') + ':' + config.web.port);
@@ -198,7 +215,7 @@ Grimm.prototype = {
           require(loc)(grimm, locals);
         }
       });
-      
+
       // public directory
       Grimm.fn.registerPublic.call(grimm, "./bundles/" + bundle);
     }
@@ -274,7 +291,7 @@ Grimm.prototype = {
         this.use(this.engine["static"](loc));
       }
     }.bind(this));
-    
+
     return this;
   },
 
