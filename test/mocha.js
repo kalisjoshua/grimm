@@ -82,16 +82,16 @@ describe("Grimm Framework", function () {
               templating: Handlebars
             });
         test.log();
-      }, "Logger provided but is not a function.");
+      }, TypeError);
     });
 
     it("should confirm configuration properties", function () {
       assert.equal(path.resolve(__dirname + "/../../.."), grimm.root, "grimm.root should return the path passed into the constructor, run through path.resolve.");
 
-      // grimm.setLogger(function (id) {return id;});
-      // assert.equal(grimm.log("hello"), "hello", "Setting a log function works.");
+      grimm.setLogger({getLevels: function () {}, log: function () {return true;}});
+      assert(grimm.log(), "Setting a log function works.");
 
-      // assert.equal("dev", grimm.env, "grimm.env should mirror the value set in the /conf/<env>.json file");
+      assert.equal("dev", grimm.env, "grimm.env should mirror the value set in the /conf/<env>.json file");
     });
   });
 
