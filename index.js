@@ -265,7 +265,7 @@ Grimm.prototype = {
 
     ((logger.getLevels && logger.getLevels()) || REQUIRED_LOGGING_LEVELS)
       .forEach(function (grimm, level) {
-        grimm[level] = grimm[level.toLowerCase()] = logger[level].bind(logger);
+        grimm[level] = grimm[level.toLowerCase()] = logger.log.bind(logger, level);
       }.bind(null, this));
 
     if (logger.log) {
