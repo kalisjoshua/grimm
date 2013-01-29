@@ -45,6 +45,7 @@ function buildFileObject (obj, dir, filter) {
   config              object from /config/<env>.json
   layouts             hash with filenames holding path to file
   partials            hash with filenames holding path to file
+  defaults            object with default values for use across the application
   delete              alias to <express>.delete
   get                 alias to <express>.get
   post                alias to <express>.post
@@ -91,6 +92,7 @@ function Grimm (config) {
   this.env = this.env.env;
 
   this.config = config.env;
+  this.defaults = config.defaults;
   // this.json = this.root + "/json";
   // this.models = this.root + "/models";
 
@@ -105,15 +107,16 @@ function Grimm (config) {
       };
     }.bind(this));
 
+  // if no logger is configured then augment the object with the level methods
   if (!config.logger) {
     REQUIRED_LOGGING_LEVELS
       .forEach(function (level) {
         this[level] = this[level.toLowerCase()] = Grimm.fn.log.bind(this, level);
       }.bind(this));
+  } else {
+    // A log function is optional since Grimm will provide a default.
+    Grimm.fn.setLogger.call(this, config.logger);
   }
-
-  // A log function is optional since Grimm will provide a default.
-  Grimm.fn.setLogger.call(this, config.logger);
 }
 
 Grimm.fn =
@@ -258,30 +261,20 @@ Grimm.prototype = {
 
   // safely set the log function; with fallback to static log function
   setLogger: function (logger) {
-    function hasRequiredFunctions (obj) {
-      return REQUIRED_LOGGING_LEVELS.every(function (item) {
-        return obj[item] && typeof obj[item] === "function";
-      });
-    }
-
     if (!logger) {
-      logger = this;
+      throw new Error("Logger not provided to setLogger().");
     }
 
-    if (!hasRequiredFunctions(logger)) {
-      throw new Error("Logger provided but does not provide required functions.");
-    }
+    ((logger.getLevels && logger.getLevels()) || REQUIRED_LOGGING_LEVELS)
+      .forEach(function (grimm, level) {
+        grimm[level] = grimm[level.toLowerCase()] = logger.log.bind(logger, level);
+      }.bind(null, this));
 
-    REQUIRED_LOGGING_LEVELS
-      .forEach(function (level) {
-        this[level] = this[level.toLowerCase()] = logger[level].bind(logger);
-      });
+    if (logger.log) {
+      this.log = logger.log.bind(logger);
+    }
 
     return this;
-  },
-
-  getLoggingLevels: function () {
-    return REQUIRED_LOGGING_LEVELS.slice(0);
   },
 
   // used for app/public and /bundles/*/public (hopefully)
@@ -318,7 +311,7 @@ Grimm.prototype = {
   },
 
   toString: function () {
-    return "Grimm Framework (HMVC) - Quicken Loans";
+    return "[object Grimm Framework]";
   },
 
   ts: function () {
@@ -333,8 +326,7 @@ Grimm.prototype = {
     REQUIRED_CONFIG_KEYS
       .forEach(function (key) {
         if (!config[key]) {
-          throw new Error("Required configuration property [" +
-            key + "] not provided to Grimm constructor.");
+          throw new Error("Required configuration property [" + key + "] not provided to Grimm constructor.");
         }
       });
 
@@ -345,10 +337,6 @@ Grimm.prototype = {
           throw new Error("Required method/property not available on config.app: " + method);
         }
       });
-
-    if (!!config.logger) {
-      this.setLogger.call(this, config.logger);
-    }
 
     // if execution gets here all is well
     return true;
