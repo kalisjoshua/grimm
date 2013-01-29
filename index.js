@@ -11,6 +11,7 @@ var fs     = require('fs'),
     REQUIRED_LOGGING_LEVELS = "Debug Info Warn Error Fatal Audit".split(" "),
 
     htmlFiles = RegExp.prototype.test.bind(/html$/);
+    jsFiles = RegExp.prototype.test.bind(/js$/);
 
 
 function buildFileObject (obj, dir, filter) {
@@ -94,10 +95,15 @@ function Grimm (config) {
   this.config = config.env;
   this.defaults = config.defaults;
   // this.json = this.root + "/json";
-  // this.models = this.root + "/models";
 
   buildFileObject(this, this.root + "/views/layouts", htmlFiles);
   buildFileObject(this, this.root + "/views/partials", htmlFiles);
+  buildFileObject(this, this.root + "/models", jsFiles);
+
+  // map the file paths to the actual modules
+  for (var prop in this.models) {
+    this.models[prop] = require(this.models[prop])(this);
+  }
 
   // alias application methods on the instance to make it nicer for developers
   REQUIRED_APP_METHODS
@@ -121,17 +127,16 @@ function Grimm (config) {
 
 Grimm.fn =
 Grimm.prototype = {
-  handler: function (data) {
+  render: function (req, res, data) {
     var grimm = this;
 
-    return function (req, res) {
-      res.render(grimm.layouts.application, xtend({}, {
-        partials: {},
-        title: "Default Page Title"
-      // FIXME: this nastiness needs to be done right now because the partials
-      //        get compiled to functions - instead of remaining paths to files
-      }, JSON.parse(JSON.stringify(data))));
-    };
+    grimm.prePageLoad(req, function (content) {
+      content = xtend({}, data, content);
+      res.render(data.layout, content);
+      grimm.postPageLoad();
+    });
+
+    // grimm.postPageLoad &&
   },
 
   // exposed for people smarter than me who want to do tricky stuff with startup
@@ -173,6 +178,8 @@ Grimm.prototype = {
     this.app.set('views', this.root + '/views');
     this.app.engine('html', this.templating.__express);
 
+    this.preAppLoad();
+
     return this;
   },
 
@@ -187,6 +194,9 @@ Grimm.prototype = {
         process.setuid(config.permissions.user);
 
         this.info('(perms) New User ID: ' + process.getuid() + ', New Group ID: ' + process.getgid());
+
+        this.postAppLoad();
+
       } catch (err) {
         this.info('(perms) Cowardly refusing to keep the process alive as root.');
         process.exit(4);
@@ -213,8 +223,12 @@ Grimm.prototype = {
           // TODO: load locals: content? (CMS), json?, models?, views
           buildFileObject(locals, loc.split("/").slice(0, -1).join("/") + "/views", htmlFiles);
 
+          grimm.preBundleLoad();
+
           // load the Node module and then execute the function
           require(loc)(grimm, locals);
+
+          grimm.postBundleLoad();
         }
       });
 
@@ -291,6 +305,24 @@ Grimm.prototype = {
         this.use(this.engine["static"](loc));
       }
     }.bind(this));
+
+    return this;
+  },
+
+  registerActions: function (object) {
+    var self = this,
+        actions = [
+          'preAppLoad',
+          'postAppLoad',
+          'preBundleLoad',
+          'postBundleLoad',
+          'prePageLoad',
+          'postPageLoad'
+        ];
+
+    actions.forEach(function(item) {
+      self[item] = object[item] || function (cps) {cps();};
+    });
 
     return this;
   },
