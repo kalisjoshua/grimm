@@ -127,16 +127,16 @@ function Grimm (config) {
 
 Grimm.fn =
 Grimm.prototype = {
-  render: function (req, res, data) {
+  render: function (req, res, bundle, data) {
     var grimm = this;
 
-    grimm.prePageLoad(req, function (content) {
-      content = xtend({}, data, content);
-      res.render(data.layout, content);
-      grimm.postPageLoad();
-    });
+    grimm.prePageLoad(req, res, bundle, function (options) {
+      options = xtend({}, data, options);
 
-    // grimm.postPageLoad &&
+      res.render(data.layout || options.layout, options);
+
+      grimm.postPageLoad(req, res, bundle);
+    });
   },
 
   // exposed for people smarter than me who want to do tricky stuff with startup
