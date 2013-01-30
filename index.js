@@ -142,6 +142,12 @@ Grimm.prototype = {
   // exposed for people smarter than me who want to do tricky stuff with startup
   // TODO: provide a way to get the config of the instance to enable above
   initialize: function () {
+    // Enable gzip compression middleware
+    this.app.use(this.engine.compress());
+
+    // Enable faux HTTP method support
+    this.app.use(this.engine.methodOverride());
+
     // Enable cookie-based sessions accessible via req.session
     this.app.use(this.engine.cookieParser('yQOTAAiriu6WNDWo'));
     this.app.use(this.engine.cookieSession({
@@ -149,7 +155,15 @@ Grimm.prototype = {
       cookie: { maxAge: 3600000 }
     }));
 
-    // // Accept POST data - raw string accessible via req.rawBody
+    // Cache compiled HTML to make it faster. Unless we're in dev.
+    if (this.env !== "dev") {
+      this.app.use(function(req, res, next) {
+        res.locals.cache = true;
+        next();
+      });
+    }
+
+    // // Accept POST data, raw string accessible via req.rawBody
     // // FIXME: May or may not work with following bodyParser method
     // this.app.use(function(req, res, next) {
     //   var data = '';
@@ -163,16 +177,8 @@ Grimm.prototype = {
     //   });
     // });
 
-    // Accept POST data - object accessible via req.body
+    // Accept POST data, object accessible via req.body
     this.app.use(this.engine.bodyParser());
-
-    // Cache compiled HTML to make it faster. Unless we're in dev.
-    if (this.env !== "dev") {
-      this.app.use(function(req, res, next) {
-        res.locals.cache = true;
-        next();
-      });
-    }
 
     // Enable templating support for Express
     this.app.set('views', this.root + '/views');
@@ -329,7 +335,6 @@ Grimm.prototype = {
 
   // call everything in order as a shortcut for application startup
   start: function (config) {
-
     Grimm.fn.registerPublic.call(this);
 
     Grimm.fn.initialize.call(this);
