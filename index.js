@@ -142,19 +142,6 @@ Grimm.prototype = {
   // exposed for people smarter than me who want to do tricky stuff with startup
   // TODO: provide a way to get the config of the instance to enable above
   initialize: function () {
-    // Enable gzip compression middleware
-    this.app.use(this.engine.compress());
-
-    // Enable faux HTTP method support
-    this.app.use(this.engine.methodOverride());
-
-    // Enable cookie-based sessions accessible via req.session
-    this.app.use(this.engine.cookieParser('yQOTAAiriu6WNDWo'));
-    this.app.use(this.engine.cookieSession({
-      key: 'ql30',
-      cookie: { maxAge: 3600000 }
-    }));
-
     // Cache compiled HTML to make it faster. Unless we're in dev.
     if (this.env !== "dev") {
       this.app.use(function(req, res, next) {
@@ -162,6 +149,9 @@ Grimm.prototype = {
         next();
       });
     }
+
+    // Enable faux HTTP method support
+    this.app.use(this.engine.methodOverride());
 
     // // Accept POST data, raw string accessible via req.rawBody
     // // FIXME: May or may not work with following bodyParser method
