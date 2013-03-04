@@ -1,6 +1,5 @@
 
 var assert          = require("chai").assert,
-    CORELogger      = require("corelogger"),
     express         = require("express"),
     Handlebars      = require("hbs"),
     http            = require("http"),
